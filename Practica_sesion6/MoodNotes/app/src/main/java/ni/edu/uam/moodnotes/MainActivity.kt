@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Brightness4
@@ -34,8 +36,8 @@ import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +48,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -151,7 +154,7 @@ fun MoodNotesApp(
                 onToggleTheme = onToggleTheme
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             when (currentScreen) {
                 AppScreen.HOME -> {
@@ -169,6 +172,9 @@ fun MoodNotesApp(
                             photoPickerLauncher.launch(
                                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
+                        },
+                        onRemoveImageClick = {
+                            selectedImageUriString = null
                         },
                         onPublishClick = {
                             val cleanText = noteText.trim()
@@ -230,26 +236,45 @@ fun TopHeader(
             Text(
                 text = "MoodNotes",
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.ExtraBold
             )
 
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Comparte tu estado en una nota rápida.",
-                style = MaterialTheme.typography.bodyLarge
+                text = "Comparte tu mood en una nota rápida.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Text(
+                    text = "Publicando como @moodnotes_user",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
         }
 
-        IconButton(onClick = onToggleTheme) {
-            Icon(
-                imageVector = Icons.Default.Brightness4,
-                contentDescription = if (isDarkTheme) {
-                    "Cambiar a modo claro"
-                } else {
-                    "Cambiar a modo oscuro"
-                }
-            )
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            IconButton(onClick = onToggleTheme) {
+                Icon(
+                    imageVector = Icons.Default.Brightness4,
+                    contentDescription = if (isDarkTheme) {
+                        "Cambiar a modo claro"
+                    } else {
+                        "Cambiar a modo oscuro"
+                    }
+                )
+            }
         }
     }
 }
@@ -261,6 +286,7 @@ fun HomeScreen(
     errorMessage: String,
     selectedImageUriString: String?,
     onSelectImageClick: () -> Unit,
+    onRemoveImageClick: () -> Unit,
     onPublishClick: () -> Unit
 ) {
     CreateNoteSection(
@@ -269,6 +295,7 @@ fun HomeScreen(
         errorMessage = errorMessage,
         selectedImageUriString = selectedImageUriString,
         onSelectImageClick = onSelectImageClick,
+        onRemoveImageClick = onRemoveImageClick,
         onPublishClick = onPublishClick
     )
 
@@ -288,9 +315,9 @@ fun HistoryScreen(
     onFilterSelected: (HistoryFilter) -> Unit,
     onDeleteNote: (Int) -> Unit
 ) {
-    Card(
+    ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        shape = RoundedCornerShape(24.dp)
     ) {
         Column(
             modifier = Modifier
@@ -330,16 +357,13 @@ fun HistoryScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             if (notes.isEmpty()) {
-                Text(
-                    text = "No hay notas para este filtro.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                EmptyHistoryState()
             } else {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(500.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     itemsIndexed(notes, key = { _, note -> note.id }) { _, note ->
                         NoteHistoryItem(
@@ -350,6 +374,32 @@ fun HistoryScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun EmptyHistoryState() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "No hay notas para este filtro.",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Text(
+            text = "Prueba creando una nota nueva o cambiando el filtro.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -367,8 +417,9 @@ fun HistoryFilterSection(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             FilterChip(
                 selected = selectedFilter == HistoryFilter.ALL,
@@ -430,11 +481,12 @@ fun CreateNoteSection(
     errorMessage: String,
     selectedImageUriString: String?,
     onSelectImageClick: () -> Unit,
+    onRemoveImageClick: () -> Unit,
     onPublishClick: () -> Unit
 ) {
-    Card(
+    ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        shape = RoundedCornerShape(24.dp)
     ) {
         Column(
             modifier = Modifier
@@ -445,6 +497,14 @@ fun CreateNoteSection(
                 text = "Nueva nota",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "Máximo 60 caracteres",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -459,7 +519,8 @@ fun CreateNoteSection(
                     Text("${noteText.length}/60 caracteres")
                 },
                 singleLine = false,
-                maxLines = 3
+                maxLines = 3,
+                shape = RoundedCornerShape(18.dp)
             )
 
             if (errorMessage.isNotEmpty()) {
@@ -473,18 +534,32 @@ fun CreateNoteSection(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedButton(
-                onClick = onSelectImageClick,
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text("Seleccionar imagen")
+                OutlinedButton(
+                    onClick = onSelectImageClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Seleccionar imagen")
+                }
+
+                if (selectedImageUriString != null) {
+                    TextButton(
+                        onClick = onRemoveImageClick,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Quitar imagen")
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             SelectedImagePreview(selectedImageUriString = selectedImageUriString)
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Button(
                 onClick = onPublishClick,
@@ -502,9 +577,10 @@ fun SelectedImagePreview(selectedImageUriString: String?) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(18.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(16.dp)
+                .padding(18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "No hay imagen seleccionada.",
@@ -531,9 +607,9 @@ fun LivePreviewSection(
     noteText: String,
     selectedImageUriString: String?
 ) {
-    Card(
+    ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        shape = RoundedCornerShape(24.dp)
     ) {
         Column(
             modifier = Modifier
@@ -549,10 +625,19 @@ fun LivePreviewSection(
             Spacer(modifier = Modifier.height(10.dp))
 
             if (noteText.isBlank() && selectedImageUriString == null) {
-                Text(
-                    text = "Todavía no has escrito una nota.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Todavía no has escrito una nota.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             } else {
                 NoteBubble(
                     text = if (noteText.isBlank()) "Sin texto por ahora" else noteText,
@@ -590,6 +675,7 @@ fun NoteBubble(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -603,34 +689,40 @@ fun NoteBubble(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Text(
-                    text = "@moodnotes_user",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
-                )
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = timeLabel,
-                        style = MaterialTheme.typography.labelMedium
-                    )
+                    AvatarCircle(letter = "M")
 
-                    if (onDeleteNote != null) {
-                        IconButton(onClick = onDeleteNote) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Eliminar nota"
-                            )
-                        }
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column {
+                        Text(
+                            text = "@moodnotes_user",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = timeLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                if (onDeleteNote != null) {
+                    IconButton(onClick = onDeleteNote) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Eliminar nota"
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Text(
                 text = text,
@@ -638,23 +730,38 @@ fun NoteBubble(
             )
 
             if (imageUriString != null) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 NoteImage(uriString = imageUriString, size = 140)
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                StatusChip(
-                    text = publishedState
-                )
-
+                StatusChip(text = publishedState)
                 StatusChip(
                     text = if (imageUriString != null) "Con imagen" else "Solo texto"
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun AvatarCircle(letter: String) {
+    Surface(
+        modifier = Modifier.size(38.dp),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.primaryContainer
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = letter,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -697,7 +804,7 @@ fun NoteImage(uriString: String, size: Int) {
     Box(
         modifier = Modifier
             .size(size.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(16.dp))
     ) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
