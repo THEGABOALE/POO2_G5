@@ -24,11 +24,23 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Brightness4
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -54,10 +66,22 @@ import java.util.Date
 import java.util.Locale
 
 data class MoodNote(
+    val id: Int,
     val text: String,
     val imageUriString: String? = null,
     val timeLabel: String = ""
 )
+
+enum class AppScreen {
+    HOME,
+    HISTORY
+}
+
+enum class HistoryFilter {
+    ALL,
+    WITH_IMAGE,
+    TEXT_ONLY
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,18 +91,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             var isDarkTheme by rememberSaveable { mutableStateOf(false) }
 
-            MoodNotesTheme(
-                darkTheme = isDarkTheme
-            ) {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    MoodNotesApp(
-                        modifier = Modifier.padding(innerPadding),
-                        isDarkTheme = isDarkTheme,
-                        onToggleTheme = {
-                            isDarkTheme = !isDarkTheme
-                        }
-                    )
-                }
+            MoodNotesTheme(darkTheme = isDarkTheme) {
+                MoodNotesApp(
+                    isDarkTheme = isDarkTheme,
+                    onToggleTheme = { isDarkTheme = !isDarkTheme }
+                )
             }
         }
     }
@@ -86,13 +103,15 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MoodNotesApp(
-    modifier: Modifier = Modifier,
     isDarkTheme: Boolean,
     onToggleTheme: () -> Unit
 ) {
+    var currentScreen by rememberSaveable { mutableStateOf(AppScreen.HOME) }
     var noteText by rememberSaveable { mutableStateOf("") }
     var errorMessage by rememberSaveable { mutableStateOf("") }
     var selectedImageUriString by rememberSaveable { mutableStateOf<String?>(null) }
+    var historyFilter by rememberSaveable { mutableStateOf(HistoryFilter.ALL) }
+    var nextId by rememberSaveable { mutableStateOf(1) }
 
     val noteHistory = remember { mutableStateListOf<MoodNote>() }
 
@@ -102,96 +121,305 @@ fun MoodNotesApp(
         selectedImageUriString = uri?.toString()
     }
 
-    Column(
-        modifier = modifier
+    val filteredNotes = noteHistory.filter { note ->
+        when (historyFilter) {
+            HistoryFilter.ALL -> true
+            HistoryFilter.WITH_IMAGE -> note.imageUriString != null
+            HistoryFilter.TEXT_ONLY -> note.imageUriString == null
+        }
+    }
+
+    Scaffold(
+        modifier = Modifier
             .fillMaxSize()
-            .systemBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.Top
-    ) {
-        Text(
-            text = "MoodNotes",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = "Comparte tu estado en una nota rápida.",
-            style = MaterialTheme.typography.bodyLarge
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedButton(
-            onClick = onToggleTheme,
-            modifier = Modifier.fillMaxWidth()
+            .systemBarsPadding(),
+        bottomBar = {
+            BottomNavigationBar(
+                currentScreen = currentScreen,
+                onScreenSelected = { currentScreen = it }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
+            TopHeader(
+                isDarkTheme = isDarkTheme,
+                onToggleTheme = onToggleTheme
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            when (currentScreen) {
+                AppScreen.HOME -> {
+                    HomeScreen(
+                        noteText = noteText,
+                        onNoteTextChange = { newValue ->
+                            if (newValue.length <= 60) {
+                                noteText = newValue
+                                if (errorMessage.isNotEmpty()) errorMessage = ""
+                            }
+                        },
+                        errorMessage = errorMessage,
+                        selectedImageUriString = selectedImageUriString,
+                        onSelectImageClick = {
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                        onPublishClick = {
+                            val cleanText = noteText.trim()
+
+                            if (cleanText.isEmpty()) {
+                                errorMessage = "Escribe una nota antes de publicar."
+                            } else {
+                                val timeNow = SimpleDateFormat(
+                                    "hh:mm a",
+                                    Locale.getDefault()
+                                ).format(Date())
+
+                                noteHistory.add(
+                                    0,
+                                    MoodNote(
+                                        id = nextId,
+                                        text = cleanText,
+                                        imageUriString = selectedImageUriString,
+                                        timeLabel = timeNow
+                                    )
+                                )
+
+                                nextId++
+                                noteText = ""
+                                selectedImageUriString = null
+                                errorMessage = ""
+                            }
+                        }
+                    )
+                }
+
+                AppScreen.HISTORY -> {
+                    HistoryScreen(
+                        notes = filteredNotes,
+                        totalNotes = noteHistory.size,
+                        selectedFilter = historyFilter,
+                        onFilterSelected = { historyFilter = it },
+                        onDeleteNote = { id ->
+                            noteHistory.removeAll { it.id == id }
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TopHeader(
+    isDarkTheme: Boolean,
+    onToggleTheme: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                if (isDarkTheme) {
+                text = "MoodNotes",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Comparte tu estado en una nota rápida.",
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+
+        IconButton(onClick = onToggleTheme) {
+            Icon(
+                imageVector = Icons.Default.Brightness4,
+                contentDescription = if (isDarkTheme) {
                     "Cambiar a modo claro"
                 } else {
                     "Cambiar a modo oscuro"
                 }
             )
         }
+    }
+}
 
-        Spacer(modifier = Modifier.height(20.dp))
+@Composable
+fun HomeScreen(
+    noteText: String,
+    onNoteTextChange: (String) -> Unit,
+    errorMessage: String,
+    selectedImageUriString: String?,
+    onSelectImageClick: () -> Unit,
+    onPublishClick: () -> Unit
+) {
+    CreateNoteSection(
+        noteText = noteText,
+        onNoteTextChange = onNoteTextChange,
+        errorMessage = errorMessage,
+        selectedImageUriString = selectedImageUriString,
+        onSelectImageClick = onSelectImageClick,
+        onPublishClick = onPublishClick
+    )
 
-        CreateNoteSection(
-            noteText = noteText,
-            onNoteTextChange = { newValue ->
-                if (newValue.length <= 60) {
-                    noteText = newValue
-                    if (errorMessage.isNotEmpty()) errorMessage = ""
-                }
-            },
-            errorMessage = errorMessage,
-            selectedImageUriString = selectedImageUriString,
-            onSelectImageClick = {
-                photoPickerLauncher.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+    Spacer(modifier = Modifier.height(16.dp))
+
+    LivePreviewSection(
+        noteText = noteText,
+        selectedImageUriString = selectedImageUriString
+    )
+}
+
+@Composable
+fun HistoryScreen(
+    notes: List<MoodNote>,
+    totalNotes: Int,
+    selectedFilter: HistoryFilter,
+    onFilterSelected: (HistoryFilter) -> Unit,
+    onDeleteNote: (Int) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Historial",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
                 )
-            },
-            onPublishClick = {
-                val cleanText = noteText.trim()
 
-                if (cleanText.isEmpty()) {
-                    errorMessage = "Escribe una nota antes de publicar."
-                } else {
-                    val timeNow = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
-
-                    noteHistory.add(
-                        0,
-                        MoodNote(
-                            text = cleanText,
-                            imageUriString = selectedImageUriString,
-                            timeLabel = timeNow
-                        )
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Text(
+                        text = "$totalNotes notas",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelLarge
                     )
-
-                    noteText = ""
-                    selectedImageUriString = null
-                    errorMessage = ""
                 }
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            HistoryFilterSection(
+                selectedFilter = selectedFilter,
+                onFilterSelected = onFilterSelected
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (notes.isEmpty()) {
+                Text(
+                    text = "No hay notas para este filtro.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(500.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    itemsIndexed(notes, key = { _, note -> note.id }) { _, note ->
+                        NoteHistoryItem(
+                            note = note,
+                            onDeleteNote = { onDeleteNote(note.id) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HistoryFilterSection(
+    selectedFilter: HistoryFilter,
+    onFilterSelected: (HistoryFilter) -> Unit
+) {
+    Column {
+        Text(
+            text = "Filtrar notas",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        LivePreviewSection(
-            noteText = noteText,
-            selectedImageUriString = selectedImageUriString
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip(
+                selected = selectedFilter == HistoryFilter.ALL,
+                onClick = { onFilterSelected(HistoryFilter.ALL) },
+                label = { Text("Todas") }
+            )
+
+            FilterChip(
+                selected = selectedFilter == HistoryFilter.WITH_IMAGE,
+                onClick = { onFilterSelected(HistoryFilter.WITH_IMAGE) },
+                label = { Text("Con imagen") }
+            )
+
+            FilterChip(
+                selected = selectedFilter == HistoryFilter.TEXT_ONLY,
+                onClick = { onFilterSelected(HistoryFilter.TEXT_ONLY) },
+                label = { Text("Solo texto") }
+            )
+        }
+    }
+}
+
+@Composable
+fun BottomNavigationBar(
+    currentScreen: AppScreen,
+    onScreenSelected: (AppScreen) -> Unit
+) {
+    NavigationBar {
+        NavigationBarItem(
+            selected = currentScreen == AppScreen.HOME,
+            onClick = { onScreenSelected(AppScreen.HOME) },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Home,
+                    contentDescription = "Inicio"
+                )
+            },
+            label = { Text("Inicio") }
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
-
-        HorizontalDivider()
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        HistorySection(noteHistory = noteHistory)
+        NavigationBarItem(
+            selected = currentScreen == AppScreen.HISTORY,
+            onClick = { onScreenSelected(AppScreen.HISTORY) },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.History,
+                    contentDescription = "Historial"
+                )
+            },
+            label = { Text("Historial") }
+        )
     }
 }
 
@@ -330,7 +558,8 @@ fun LivePreviewSection(
                     text = if (noteText.isBlank()) "Sin texto por ahora" else noteText,
                     imageUriString = selectedImageUriString,
                     timeLabel = "Sin publicar",
-                    publishedState = "Borrador"
+                    publishedState = "Borrador",
+                    onDeleteNote = null
                 )
             }
         }
@@ -338,69 +567,16 @@ fun LivePreviewSection(
 }
 
 @Composable
-fun HistorySection(noteHistory: List<MoodNote>) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Historial",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.secondaryContainer
-                ) {
-                    Text(
-                        text = "${noteHistory.size} notas",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (noteHistory.isEmpty()) {
-                Text(
-                    text = "Todavía no hay notas publicadas.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    itemsIndexed(noteHistory) { _, note ->
-                        NoteHistoryItem(note = note)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun NoteHistoryItem(note: MoodNote) {
+fun NoteHistoryItem(
+    note: MoodNote,
+    onDeleteNote: () -> Unit
+) {
     NoteBubble(
         text = note.text,
         imageUriString = note.imageUriString,
         timeLabel = note.timeLabel,
-        publishedState = "Publicado"
+        publishedState = "Publicado",
+        onDeleteNote = onDeleteNote
     )
 }
 
@@ -409,7 +585,8 @@ fun NoteBubble(
     text: String,
     imageUriString: String?,
     timeLabel: String,
-    publishedState: String
+    publishedState: String,
+    onDeleteNote: (() -> Unit)?
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -434,10 +611,23 @@ fun NoteBubble(
                     fontWeight = FontWeight.Bold
                 )
 
-                Text(
-                    text = timeLabel,
-                    style = MaterialTheme.typography.labelMedium
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = timeLabel,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+
+                    if (onDeleteNote != null) {
+                        IconButton(onClick = onDeleteNote) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Eliminar nota"
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -471,15 +661,34 @@ fun NoteBubble(
 
 @Composable
 fun StatusChip(text: String) {
+    val icon = when (text) {
+        "Con imagen" -> Icons.Default.Image
+        "Solo texto" -> Icons.Default.TextFields
+        else -> null
+    }
+
     Surface(
         shape = RoundedCornerShape(50),
         color = MaterialTheme.colorScheme.primaryContainer
     ) {
-        Text(
-            text = text,
+        Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelMedium
-        )
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
     }
 }
 
