@@ -12,20 +12,32 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ni.edu.uam.moodnotes.ui.theme.MoodNotesTheme
+
+data class MoodNote(
+    val text: String
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,12 +58,15 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MoodNotesApp(modifier: Modifier = Modifier) {
+    var noteText by rememberSaveable { mutableStateOf("") }
+    var errorMessage by rememberSaveable { mutableStateOf("") }
+    val noteHistory = remember { mutableStateListOf<MoodNote>() }
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .systemBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .verticalScroll(rememberScrollState()),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.Top
     ) {
         Text(
@@ -69,7 +84,30 @@ fun MoodNotesApp(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        CreateNoteSection()
+        CreateNoteSection(
+            noteText = noteText,
+            onNoteTextChange = { newValue ->
+                if (newValue.length <= 60) {
+                    noteText = newValue
+                    if (errorMessage.isNotEmpty()) errorMessage = ""
+                }
+            },
+            errorMessage = errorMessage,
+            onPublishClick = {
+                val cleanText = noteText.trim()
+
+                if (cleanText.isEmpty()) {
+                    errorMessage = "Escribe una nota antes de publicar."
+                } else {
+                    noteHistory.add(
+                        0,
+                        MoodNote(text = cleanText)
+                    )
+                    noteText = ""
+                    errorMessage = ""
+                }
+            }
+        )
 
         Spacer(modifier = Modifier.height(20.dp))
 
@@ -77,12 +115,17 @@ fun MoodNotesApp(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        HistorySection()
+        HistorySection(noteHistory = noteHistory)
     }
 }
 
 @Composable
-fun CreateNoteSection() {
+fun CreateNoteSection(
+    noteText: String,
+    onNoteTextChange: (String) -> Unit,
+    errorMessage: String,
+    onPublishClick: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -98,18 +141,44 @@ fun CreateNoteSection() {
                 fontWeight = FontWeight.SemiBold
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
-                text = "Aquí luego irá el campo de texto, el selector de imagen y el botón para publicar.",
-                style = MaterialTheme.typography.bodyMedium
+            OutlinedTextField(
+                value = noteText,
+                onValueChange = onNoteTextChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Escribe tu mood") },
+                placeholder = { Text("¿Qué estás pensando?") },
+                supportingText = {
+                    Text("${noteText.length}/60 caracteres")
+                },
+                singleLine = false,
+                maxLines = 3
             )
+
+            if (errorMessage.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = onPublishClick,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Publicar nota")
+            }
         }
     }
 }
 
 @Composable
-fun HistorySection() {
+fun HistorySection(noteHistory: List<MoodNote>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -125,11 +194,54 @@ fun HistorySection() {
                 fontWeight = FontWeight.SemiBold
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (noteHistory.isEmpty()) {
+                Text(
+                    text = "Todavía no hay notas publicadas.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    itemsIndexed(noteHistory) { index, note ->
+                        NoteHistoryItem(
+                            index = index + 1,
+                            note = note
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NoteHistoryItem(index: Int, note: MoodNote) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            Text(
+                text = "Nota #$index",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Todavía no hay notas publicadas.",
-                style = MaterialTheme.typography.bodyMedium
+                text = note.text,
+                style = MaterialTheme.typography.bodyLarge
             )
         }
     }
