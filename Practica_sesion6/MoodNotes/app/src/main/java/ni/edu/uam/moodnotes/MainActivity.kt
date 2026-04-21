@@ -132,7 +132,9 @@ fun MoodNotesApp(modifier: Modifier = Modifier) {
                             imageUriString = selectedImageUriString
                         )
                     )
+
                     noteText = ""
+                    selectedImageUriString = null
                     errorMessage = ""
                 }
             }
