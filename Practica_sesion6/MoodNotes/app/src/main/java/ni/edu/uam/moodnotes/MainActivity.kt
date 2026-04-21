@@ -11,7 +11,9 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,6 +41,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
@@ -45,10 +49,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import ni.edu.uam.moodnotes.ui.theme.MoodNotesTheme
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class MoodNote(
     val text: String,
-    val imageUriString: String? = null
+    val imageUriString: String? = null,
+    val timeLabel: String = ""
 )
 
 class MainActivity : ComponentActivity() {
@@ -152,11 +160,14 @@ fun MoodNotesApp(
                 if (cleanText.isEmpty()) {
                     errorMessage = "Escribe una nota antes de publicar."
                 } else {
+                    val timeNow = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
+
                     noteHistory.add(
                         0,
                         MoodNote(
                             text = cleanText,
-                            imageUriString = selectedImageUriString
+                            imageUriString = selectedImageUriString,
+                            timeLabel = timeNow
                         )
                     )
 
@@ -165,6 +176,13 @@ fun MoodNotesApp(
                     errorMessage = ""
                 }
             }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LivePreviewSection(
+            noteText = noteText,
+            selectedImageUriString = selectedImageUriString
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -281,7 +299,10 @@ fun SelectedImagePreview(selectedImageUriString: String?) {
 }
 
 @Composable
-fun HistorySection(noteHistory: List<MoodNote>) {
+fun LivePreviewSection(
+    noteText: String,
+    selectedImageUriString: String?
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -292,10 +313,63 @@ fun HistorySection(noteHistory: List<MoodNote>) {
                 .padding(16.dp)
         ) {
             Text(
-                text = "Historial",
-                style = MaterialTheme.typography.titleLarge,
+                text = "Vista previa de la nota",
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (noteText.isBlank() && selectedImageUriString == null) {
+                Text(
+                    text = "Todavía no has escrito una nota.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else {
+                NoteBubble(
+                    text = if (noteText.isBlank()) "Sin texto por ahora" else noteText,
+                    imageUriString = selectedImageUriString,
+                    timeLabel = "Sin publicar",
+                    publishedState = "Borrador"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun HistorySection(noteHistory: List<MoodNote>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Historial",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Text(
+                        text = "${noteHistory.size} notas",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -311,11 +385,8 @@ fun HistorySection(noteHistory: List<MoodNote>) {
                         .height(300.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    itemsIndexed(noteHistory) { index, note ->
-                        NoteHistoryItem(
-                            index = index + 1,
-                            note = note
-                        )
+                    itemsIndexed(noteHistory) { _, note ->
+                        NoteHistoryItem(note = note)
                     }
                 }
             }
@@ -324,52 +395,113 @@ fun HistorySection(noteHistory: List<MoodNote>) {
 }
 
 @Composable
-fun NoteHistoryItem(index: Int, note: MoodNote) {
+fun NoteHistoryItem(note: MoodNote) {
+    NoteBubble(
+        text = note.text,
+        imageUriString = note.imageUriString,
+        timeLabel = note.timeLabel,
+        publishedState = "Publicado"
+    )
+}
+
+@Composable
+fun NoteBubble(
+    text: String,
+    imageUriString: String?,
+    timeLabel: String,
+    publishedState: String
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
+                .padding(14.dp)
         ) {
-            Text(
-                text = "Nota #$index",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "@moodnotes_user",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
 
-            Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = timeLabel,
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = note.text,
+                text = text,
                 style = MaterialTheme.typography.bodyLarge
             )
 
-            if (note.imageUriString != null) {
+            if (imageUriString != null) {
                 Spacer(modifier = Modifier.height(10.dp))
-                NoteImage(uriString = note.imageUriString, size = 140)
+                NoteImage(uriString = imageUriString, size = 140)
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatusChip(
+                    text = publishedState
+                )
+
+                StatusChip(
+                    text = if (imageUriString != null) "Con imagen" else "Solo texto"
+                )
             }
         }
     }
 }
 
 @Composable
+fun StatusChip(text: String) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.primaryContainer
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelMedium
+        )
+    }
+}
+
+@Composable
 fun NoteImage(uriString: String, size: Int) {
-    AndroidView(
+    Box(
         modifier = Modifier
             .size(size.dp)
-            .clip(RoundedCornerShape(12.dp)),
-        factory = { context ->
-            ImageView(context).apply {
-                scaleType = ImageView.ScaleType.CENTER_CROP
+            .clip(RoundedCornerShape(12.dp))
+    ) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { context ->
+                ImageView(context).apply {
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                }
+            },
+            update = { imageView ->
+                imageView.setImageURI(Uri.parse(uriString))
             }
-        },
-        update = { imageView ->
-            imageView.setImageURI(Uri.parse(uriString))
-        }
-    )
+        )
+    }
 }
 
 @Preview(showBackground = true, showSystemUi = true)
