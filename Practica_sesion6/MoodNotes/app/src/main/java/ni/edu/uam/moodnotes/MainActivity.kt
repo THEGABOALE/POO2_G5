@@ -57,10 +57,18 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            MoodNotesTheme {
+            var isDarkTheme by rememberSaveable { mutableStateOf(false) }
+
+            MoodNotesTheme(
+                darkTheme = isDarkTheme
+            ) {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     MoodNotesApp(
-                        modifier = Modifier.padding(innerPadding)
+                        modifier = Modifier.padding(innerPadding),
+                        isDarkTheme = isDarkTheme,
+                        onToggleTheme = {
+                            isDarkTheme = !isDarkTheme
+                        }
                     )
                 }
             }
@@ -69,7 +77,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MoodNotesApp(modifier: Modifier = Modifier) {
+fun MoodNotesApp(
+    modifier: Modifier = Modifier,
+    isDarkTheme: Boolean,
+    onToggleTheme: () -> Unit
+) {
     var noteText by rememberSaveable { mutableStateOf("") }
     var errorMessage by rememberSaveable { mutableStateOf("") }
     var selectedImageUriString by rememberSaveable { mutableStateOf<String?>(null) }
@@ -101,6 +113,21 @@ fun MoodNotesApp(modifier: Modifier = Modifier) {
             text = "Comparte tu estado en una nota rápida.",
             style = MaterialTheme.typography.bodyLarge
         )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedButton(
+            onClick = onToggleTheme,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                if (isDarkTheme) {
+                    "Cambiar a modo claro"
+                } else {
+                    "Cambiar a modo oscuro"
+                }
+            )
+        }
 
         Spacer(modifier = Modifier.height(20.dp))
 
@@ -349,6 +376,9 @@ fun NoteImage(uriString: String, size: Int) {
 @Composable
 fun MoodNotesPreview() {
     MoodNotesTheme {
-        MoodNotesApp()
+        MoodNotesApp(
+            isDarkTheme = false,
+            onToggleTheme = {}
+        )
     }
 }
