@@ -1,9 +1,15 @@
 package ni.edu.uam.moodnotes
 
+import android.net.Uri
 import android.os.Bundle
+import android.widget.ImageView
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -11,14 +17,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -30,13 +39,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import ni.edu.uam.moodnotes.ui.theme.MoodNotesTheme
 
 data class MoodNote(
-    val text: String
+    val text: String,
+    val imageUriString: String? = null
 )
 
 class MainActivity : ComponentActivity() {
@@ -60,7 +72,15 @@ class MainActivity : ComponentActivity() {
 fun MoodNotesApp(modifier: Modifier = Modifier) {
     var noteText by rememberSaveable { mutableStateOf("") }
     var errorMessage by rememberSaveable { mutableStateOf("") }
+    var selectedImageUriString by rememberSaveable { mutableStateOf<String?>(null) }
+
     val noteHistory = remember { mutableStateListOf<MoodNote>() }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        selectedImageUriString = uri?.toString()
+    }
 
     Column(
         modifier = modifier
@@ -93,6 +113,12 @@ fun MoodNotesApp(modifier: Modifier = Modifier) {
                 }
             },
             errorMessage = errorMessage,
+            selectedImageUriString = selectedImageUriString,
+            onSelectImageClick = {
+                photoPickerLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            },
             onPublishClick = {
                 val cleanText = noteText.trim()
 
@@ -101,7 +127,10 @@ fun MoodNotesApp(modifier: Modifier = Modifier) {
                 } else {
                     noteHistory.add(
                         0,
-                        MoodNote(text = cleanText)
+                        MoodNote(
+                            text = cleanText,
+                            imageUriString = selectedImageUriString
+                        )
                     )
                     noteText = ""
                     errorMessage = ""
@@ -124,6 +153,8 @@ fun CreateNoteSection(
     noteText: String,
     onNoteTextChange: (String) -> Unit,
     errorMessage: String,
+    selectedImageUriString: String?,
+    onSelectImageClick: () -> Unit,
     onPublishClick: () -> Unit
 ) {
     Card(
@@ -167,12 +198,55 @@ fun CreateNoteSection(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            OutlinedButton(
+                onClick = onSelectImageClick,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Seleccionar imagen")
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            SelectedImagePreview(selectedImageUriString = selectedImageUriString)
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             Button(
                 onClick = onPublishClick,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Publicar nota")
             }
+        }
+    }
+}
+
+@Composable
+fun SelectedImagePreview(selectedImageUriString: String?) {
+    if (selectedImageUriString == null) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "No hay imagen seleccionada.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    } else {
+        Column {
+            Text(
+                text = "Vista previa de la imagen",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            NoteImage(uriString = selectedImageUriString, size = 180)
         }
     }
 }
@@ -243,8 +317,30 @@ fun NoteHistoryItem(index: Int, note: MoodNote) {
                 text = note.text,
                 style = MaterialTheme.typography.bodyLarge
             )
+
+            if (note.imageUriString != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                NoteImage(uriString = note.imageUriString, size = 140)
+            }
         }
     }
+}
+
+@Composable
+fun NoteImage(uriString: String, size: Int) {
+    AndroidView(
+        modifier = Modifier
+            .size(size.dp)
+            .clip(RoundedCornerShape(12.dp)),
+        factory = { context ->
+            ImageView(context).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+            }
+        },
+        update = { imageView ->
+            imageView.setImageURI(Uri.parse(uriString))
+        }
+    )
 }
 
 @Preview(showBackground = true, showSystemUi = true)
