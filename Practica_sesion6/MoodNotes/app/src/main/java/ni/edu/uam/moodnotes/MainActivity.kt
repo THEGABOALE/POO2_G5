@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -48,10 +49,13 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -117,6 +121,7 @@ fun MoodNotesApp(
     var selectedImageUriString by rememberSaveable { mutableStateOf<String?>(null) }
     var historyFilter by rememberSaveable { mutableStateOf(HistoryFilter.ALL) }
     var nextId by rememberSaveable { mutableStateOf(1) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val noteHistory = remember { mutableStateListOf<MoodNote>() }
 
@@ -138,6 +143,8 @@ fun MoodNotesApp(
         modifier = Modifier
             .fillMaxSize()
             .systemBarsPadding(),
+        containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
             BottomNavigationBar(
                 currentScreen = currentScreen,
@@ -204,7 +211,8 @@ fun MoodNotesApp(
                                 selectedImageUriString = null
                                 errorMessage = ""
                             }
-                        }
+                        },
+                        snackbarHostState = snackbarHostState
                     )
                 }
 
@@ -229,53 +237,65 @@ fun TopHeader(
     isDarkTheme: Boolean,
     onToggleTheme: () -> Unit
 ) {
-    Row(
+    ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "MoodNotes",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold
-            )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "MoodNotes",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
 
-            Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-            Text(
-                text = "Comparte tu mood en una nota rápida.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+                Text(
+                    text = "Comparte tu mood en una nota rápida y visual.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
-            Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Text(
+                        text = "Publicando como @moodnotes_user",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
 
             Surface(
-                shape = RoundedCornerShape(50),
-                color = MaterialTheme.colorScheme.secondaryContainer
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
-                Text(
-                    text = "Publicando como @moodnotes_user",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelLarge
-                )
-            }
-        }
-
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceVariant
-        ) {
-            IconButton(onClick = onToggleTheme) {
-                Icon(
-                    imageVector = Icons.Default.Brightness4,
-                    contentDescription = if (isDarkTheme) {
-                        "Cambiar a modo claro"
-                    } else {
-                        "Cambiar a modo oscuro"
-                    }
-                )
+                IconButton(onClick = onToggleTheme) {
+                    Icon(
+                        imageVector = Icons.Default.Brightness4,
+                        contentDescription = if (isDarkTheme) {
+                            "Cambiar a modo claro"
+                        } else {
+                            "Cambiar a modo oscuro"
+                        },
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }
@@ -289,7 +309,8 @@ fun HomeScreen(
     selectedImageUriString: String?,
     onSelectImageClick: () -> Unit,
     onRemoveImageClick: () -> Unit,
-    onPublishClick: () -> Unit
+    onPublishClick: () -> Unit,
+    snackbarHostState: SnackbarHostState
 ) {
     CreateNoteSection(
         noteText = noteText,
@@ -298,8 +319,16 @@ fun HomeScreen(
         selectedImageUriString = selectedImageUriString,
         onSelectImageClick = onSelectImageClick,
         onRemoveImageClick = onRemoveImageClick,
-        onPublishClick = onPublishClick
+        onPublishClick = {
+            onPublishClick()
+        }
     )
+
+    LaunchedEffect(errorMessage) {
+        if (errorMessage.isEmpty()) {
+            // sin acción
+        }
+    }
 
     Spacer(modifier = Modifier.height(16.dp))
 
@@ -319,7 +348,10 @@ fun HistoryScreen(
 ) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp)
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(
             modifier = Modifier
@@ -334,7 +366,7 @@ fun HistoryScreen(
                 Text(
                     text = "Historial",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
+                    color = MaterialTheme.colorScheme.primary
                 )
 
                 Surface(
@@ -344,7 +376,8 @@ fun HistoryScreen(
                     Text(
                         text = "$totalNotes notas",
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelLarge
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
             }
@@ -392,13 +425,13 @@ fun EmptyHistoryState() {
         Text(
             text = "No hay notas para este filtro.",
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
+            color = MaterialTheme.colorScheme.primary
         )
 
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "Prueba creando una nota nueva o cambiando el filtro.",
+            text = "Probá creando una nota nueva o cambiando el filtro.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -444,7 +477,9 @@ fun BottomNavigationBar(
     currentScreen: AppScreen,
     onScreenSelected: (AppScreen) -> Unit
 ) {
-    NavigationBar {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
         NavigationBarItem(
             selected = currentScreen == AppScreen.HOME,
             onClick = { onScreenSelected(AppScreen.HOME) },
@@ -483,7 +518,10 @@ fun CreateNoteSection(
 ) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp)
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(
             modifier = Modifier
@@ -493,7 +531,7 @@ fun CreateNoteSection(
             Text(
                 text = "Nueva nota",
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
+                color = MaterialTheme.colorScheme.primary
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -537,7 +575,8 @@ fun CreateNoteSection(
             ) {
                 OutlinedButton(
                     onClick = onSelectImageClick,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Text("Seleccionar imagen")
                 }
@@ -560,7 +599,11 @@ fun CreateNoteSection(
 
             Button(
                 onClick = onPublishClick,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
             ) {
                 Text("Publicar nota")
             }
@@ -581,7 +624,8 @@ fun SelectedImagePreview(selectedImageUriString: String?) {
         ) {
             Text(
                 text = "No hay imagen seleccionada.",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     } else {
@@ -606,7 +650,10 @@ fun LivePreviewSection(
 ) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp)
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(
             modifier = Modifier
@@ -616,7 +663,7 @@ fun LivePreviewSection(
             Text(
                 text = "Vista previa de la nota",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                color = MaterialTheme.colorScheme.primary
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -632,7 +679,8 @@ fun LivePreviewSection(
                 ) {
                     Text(
                         text = "Todavía no has escrito una nota.",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
@@ -713,7 +761,8 @@ fun NoteBubble(
                     IconButton(onClick = onDeleteNote) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Eliminar nota"
+                            contentDescription = "Eliminar nota",
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -723,7 +772,8 @@ fun NoteBubble(
 
             Text(
                 text = text,
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             if (imageUriString != null) {
@@ -756,7 +806,8 @@ fun AvatarCircle(letter: String) {
             Text(
                 text = letter,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
     }
@@ -783,13 +834,15 @@ fun StatusChip(text: String) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
 
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelMedium
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
     }
