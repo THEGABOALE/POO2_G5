@@ -26,16 +26,10 @@ import ni.edu.uam.momentum.ui.components.ProgressCard
 import ni.edu.uam.momentum.ui.components.WeeklySummary
 
 @Composable
-fun DashboardScreen() {
-    val userName = "Gabriel"
-
-    val habits = listOf(
-        Habit("Beber 2L de agua", "2L", true, "Salud"),
-        Habit("Leer 20 minutos", "8:00 AM", false, "Estudio"),
-        Habit("Hacer ejercicio", "30 min", true, "Salud"),
-        Habit("Organizar tareas", "7:30 PM", false, "Trabajo")
-    )
-
+fun DashboardScreen(
+    userName: String,
+    habits: List<Habit>
+) {
     val weeklyProgress = listOf(
         "L" to true,
         "M" to true,
