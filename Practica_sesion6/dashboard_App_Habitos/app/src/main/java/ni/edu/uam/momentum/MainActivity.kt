@@ -3,7 +3,7 @@ package ni.edu.uam.momentum
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import ni.edu.uam.momentum.ui.screen.DashboardScreen
+import ni.edu.uam.momentum.ui.screen.AppScreen
 import ni.edu.uam.momentum.ui.theme.MomentumTheme
 
 class MainActivity : ComponentActivity() {
@@ -11,7 +11,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MomentumTheme {
-                DashboardScreen()
+                AppScreen()
             }
         }
     }
