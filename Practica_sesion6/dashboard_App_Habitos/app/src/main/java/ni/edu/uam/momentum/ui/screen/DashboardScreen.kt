@@ -30,14 +30,28 @@ fun DashboardScreen() {
     val userName = "Gabriel"
 
     val habits = listOf(
-        Habit("Beber agua", "2L", true, "Salud"),
-        Habit("Leer 20 min", "8:00 AM", false, "Estudio"),
-        Habit("Ejercicio", "30 min", true, "Salud"),
-        Habit("Revisar correos", "9:00 AM", false, "Trabajo")
+        Habit("Beber 2L de agua", "2L", true, "Salud"),
+        Habit("Leer 20 minutos", "8:00 AM", false, "Estudio"),
+        Habit("Hacer ejercicio", "30 min", true, "Salud"),
+        Habit("Organizar tareas", "7:30 PM", false, "Trabajo")
+    )
+
+    val weeklyProgress = listOf(
+        "L" to true,
+        "M" to true,
+        "X" to false,
+        "J" to true,
+        "V" to false,
+        "S" to true,
+        "D" to false
     )
 
     val completedCount = habits.count { it.completed }
-    val progress = completedCount.toFloat() / habits.size.toFloat()
+    val progress = if (habits.isNotEmpty()) {
+        completedCount.toFloat() / habits.size.toFloat()
+    } else {
+        0f
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -82,7 +96,7 @@ fun DashboardScreen() {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            WeeklySummary()
+            WeeklySummary(weeklyProgress = weeklyProgress)
         }
     }
 }
