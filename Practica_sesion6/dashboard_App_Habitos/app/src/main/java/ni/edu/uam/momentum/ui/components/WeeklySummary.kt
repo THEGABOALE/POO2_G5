@@ -10,27 +10,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun WeeklySummary() {
-    val days = listOf(
-        "L" to true,
-        "M" to true,
-        "X" to false,
-        "J" to true,
-        "V" to false,
-        "S" to true,
-        "D" to false
-    )
-
+fun WeeklySummary(weeklyProgress: List<Pair<String, Boolean>>) {
     Column {
-        Text(text = "Resumen semanal")
+        Text(
+            text = "Resumen semanal",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -38,22 +33,29 @@ fun WeeklySummary() {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            days.forEach { (day, completed) ->
+            weeklyProgress.forEach { (day, completed) ->
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(38.dp)
                             .background(
-                                color = if (completed) Color(0xFF6FCF97) else Color.LightGray,
+                                color = if (completed) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                },
                                 shape = CircleShape
                             )
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    Text(text = day)
+                    Text(
+                        text = day,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }
