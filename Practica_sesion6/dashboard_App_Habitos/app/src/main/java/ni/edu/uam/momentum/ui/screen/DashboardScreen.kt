@@ -17,10 +17,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ni.edu.uam.momentum.data.Habit
+import ni.edu.uam.momentum.ui.components.AddGoalDialog
 import ni.edu.uam.momentum.ui.components.HabitItem
 import ni.edu.uam.momentum.ui.components.HeaderSection
 import ni.edu.uam.momentum.ui.components.ProgressCard
@@ -30,8 +35,11 @@ import ni.edu.uam.momentum.ui.components.WeeklySummary
 fun DashboardScreen(
     userName: String,
     profileImageUri: Uri?,
-    habits: List<Habit>
+    habits: List<Habit>,
+    onAddHabit: (Habit) -> Unit
 ) {
+    var showAddGoalDialog by remember { mutableStateOf(false) }
+
     val weeklyProgress = listOf(
         "L" to false,
         "M" to false,
@@ -49,9 +57,21 @@ fun DashboardScreen(
         0f
     }
 
+    if (showAddGoalDialog) {
+        AddGoalDialog(
+            onDismiss = { showAddGoalDialog = false },
+            onAddGoal = { newHabit ->
+                onAddHabit(newHabit)
+                showAddGoalDialog = false
+            }
+        )
+    }
+
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = { }) {
+            FloatingActionButton(
+                onClick = { showAddGoalDialog = true }
+            ) {
                 Icon(
                     imageVector = Icons.Filled.Add,
                     contentDescription = "Agregar meta"
