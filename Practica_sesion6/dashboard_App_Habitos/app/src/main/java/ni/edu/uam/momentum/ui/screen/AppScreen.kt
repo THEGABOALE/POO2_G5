@@ -1,5 +1,6 @@
 package ni.edu.uam.momentum.ui.screen
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -11,18 +12,20 @@ import ni.edu.uam.momentum.data.Habit
 fun AppScreen() {
     var hasStarted by remember { mutableStateOf(false) }
     var userName by remember { mutableStateOf("") }
-    var userHabits by remember { mutableStateOf(listOf<Habit>()) }
+    var profileImageUri by remember { mutableStateOf<Uri?>(null) }
+    var habits by remember { mutableStateOf(listOf<Habit>()) }
 
     if (!hasStarted) {
-        SetupScreen { name, habits ->
+        WelcomeScreen { name, imageUri ->
             userName = name
-            userHabits = habits
+            profileImageUri = imageUri
             hasStarted = true
         }
     } else {
         DashboardScreen(
             userName = userName,
-            habits = userHabits
+            profileImageUri = profileImageUri,
+            habits = habits
         )
     }
 }

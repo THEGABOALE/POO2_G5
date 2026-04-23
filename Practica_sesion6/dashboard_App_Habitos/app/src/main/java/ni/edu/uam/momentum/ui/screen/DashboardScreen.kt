@@ -1,5 +1,6 @@
 package ni.edu.uam.momentum.ui.screen
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -28,15 +29,16 @@ import ni.edu.uam.momentum.ui.components.WeeklySummary
 @Composable
 fun DashboardScreen(
     userName: String,
+    profileImageUri: Uri?,
     habits: List<Habit>
 ) {
     val weeklyProgress = listOf(
-        "L" to true,
-        "M" to true,
+        "L" to false,
+        "M" to false,
         "X" to false,
-        "J" to true,
+        "J" to false,
         "V" to false,
-        "S" to true,
+        "S" to false,
         "D" to false
     )
 
@@ -52,7 +54,7 @@ fun DashboardScreen(
             FloatingActionButton(onClick = { }) {
                 Icon(
                     imageVector = Icons.Filled.Add,
-                    contentDescription = "Agregar hábito"
+                    contentDescription = "Agregar meta"
                 )
             }
         }
@@ -63,7 +65,10 @@ fun DashboardScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-            HeaderSection(userName = userName)
+            HeaderSection(
+                userName = userName,
+                profileImageUri = profileImageUri
+            )
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -72,19 +77,27 @@ fun DashboardScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Tus hábitos",
+                text = "Tus metas",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.weight(1f, fill = false)
-            ) {
-                items(habits) { habit ->
-                    HabitItem(habit = habit)
+            if (habits.isEmpty()) {
+                Text(
+                    text = "Todavía no has agregado metas. Usa el botón + para comenzar.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    items(habits) { habit ->
+                        HabitItem(habit = habit)
+                    }
                 }
             }
 
