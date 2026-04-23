@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ni.edu.uam.momentum.data.Habit
+import ni.edu.uam.momentum.data.HabitType
 
 @Composable
 fun HabitItem(habit: Habit) {
@@ -36,6 +37,18 @@ fun HabitItem(habit: Habit) {
         MaterialTheme.colorScheme.primary
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    val typeLabel = when (habit.type) {
+        HabitType.MANUAL -> "Manual"
+        HabitType.TIMER -> "Temporizador"
+        HabitType.DEADLINE -> "Fecha límite"
+    }
+
+    val detailText = when (habit.type) {
+        HabitType.MANUAL -> habit.goal
+        HabitType.TIMER -> habit.duration ?: habit.goal
+        HabitType.DEADLINE -> habit.dueDate ?: habit.goal
     }
 
     Card(
@@ -77,14 +90,16 @@ fun HabitItem(habit: Habit) {
                     Spacer(modifier = Modifier.height(6.dp))
 
                     CategoryBadge(category = habit.category)
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = "$typeLabel • $detailText",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
-
-            Text(
-                text = habit.goal,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
