@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,9 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -38,7 +36,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -189,7 +186,7 @@ fun PantallaRegistro(
         )
 
         Text(
-            text = "Registrate para empezar tu pedido",
+            text = "Configurá tu perfil y dirección de entrega",
             fontSize = 16.sp,
             color = TextGray
         )
@@ -235,10 +232,10 @@ fun PantallaRegistro(
             value = nombreUsuario,
             onValueChange = onNombreChange,
             label = {
-                Text(text = "Nombre")
+                Text(text = "Nombre completo")
             },
             placeholder = {
-                Text(text = "Ej: Gabriel")
+                Text(text = "Ingrese su nombre completo")
             },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -253,16 +250,19 @@ fun PantallaRegistro(
             value = ubicacionUsuario,
             onValueChange = onUbicacionChange,
             label = {
-                Text(text = "Ubicación")
+                Text(text = "Dirección de entrega")
             },
             placeholder = {
-                Text(text = "Ej: Managua, Nicaragua")
+                Text(text = "Barrio, calle, casa o punto de referencia")
             },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.Words
-            )
+                capitalization = KeyboardCapitalization.Sentences
+            ),
+            supportingText = {
+                Text(text = "Agregue una dirección clara para recibir su pedido.")
+            }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
